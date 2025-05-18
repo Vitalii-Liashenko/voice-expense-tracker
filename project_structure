@@ -1,0 +1,39 @@
+voice_expense_tracker/
+│
+├── .env                        # Секрети: Telegram Token, OpenAI API Key
+├── docker-compose.yml         # Контейнер для PostgreSQL
+├── requirements.txt           # Залежності (або pyproject.toml, якщо використовуєш Poetry)
+├── run.py                     # Точка входу
+│
+├── config/
+│   └── settings.py            # Налаштування проєкту (база, API ключі, ліміти)
+│
+├── telegram_bot/
+│   ├── __init__.py
+│   ├── handlers.py            # Обробка вхідних повідомлень (голос, текст)
+│   └── bot.py                 # Telegram Bot Dispatcher
+│
+├── whisper_transcriber/
+│   ├── __init__.py
+│   └── transcriber.py         # Використання Whisper API для розпізнавання голосу
+│
+├── ai_agent/
+│   ├── __init__.py
+│   ├── intent_classifier.py   # LLM: визначення наміру (витрата / запит / інше)
+│   ├── expense_parser.py      # LLM: витяг суми, категорії, опису
+│   └── analytics_agent.py     # LLM: відповіді на аналітичні запити (LangChain SQL tool)
+│
+├── db/
+│   ├── __init__.py
+│   ├── models.py              # SQLAlchemy моделі (таблиця витрат, ліміти)
+│   ├── database.py            # Підключення до Postgres
+│   └── queries.py             # CRUD-операції
+│
+├── utils/
+│   ├── __init__.py
+│   └── helpers.py             # Конвертації, парсери дат, логування, тощо
+│
+└── tests/
+    ├── test_parser.py         # Тестування LLM парсера витрат
+    ├── test_bot.py            # Тестування взаємодії Telegram-бота
+    └── test_db.py             # Тестування запитів до БД
