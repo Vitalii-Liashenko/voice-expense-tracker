@@ -1,24 +1,26 @@
 """
 Database connection setup for Voice Expense Tracker.
 """
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
+from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
-# Завантаження змінних середовища
-load_dotenv()
+# Перевірка необхідних параметрів
+required_params = {
+    'DB_HOST': DB_HOST,
+    'DB_PORT': DB_PORT,
+    'DB_NAME': DB_NAME,
+    'DB_USER': DB_USER,
+    'DB_PASSWORD': DB_PASSWORD
+}
 
-# Отримання параметрів підключення до бази даних
-POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
-POSTGRES_DB = os.getenv("POSTGRES_DB", "voice_expense_tracker")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+for param_name, value in required_params.items():
+    if not value:
+        raise ValueError(f"Помилка: не встановлено {param_name} у файлі .env.local")
 
 # Рядок підключення до бази даних
-DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Створення движка бази даних
 engine = create_engine(DATABASE_URL)

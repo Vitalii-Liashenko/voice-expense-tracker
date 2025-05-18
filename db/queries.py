@@ -110,6 +110,34 @@ def get_expenses_by_period(
     
     return query.all()
 
+def get_total_expenses(
+    db: Session,
+    user_id: int,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+) -> float:
+    """
+    Отримує загальні витрати користувача за вказаний період.
+    
+    Args:
+        db: Сесія бази даних
+        user_id: ID користувача в Telegram
+        start_date: Початкова дата для фільтрації
+        end_date: Кінцева дата для фільтрації
+        
+    Returns:
+        Загальна сума витрат
+    """
+    query = db.query(func.sum(Expense.amount)).filter(Expense.user_id == user_id)
+    
+    if start_date:
+        query = query.filter(Expense.created_at >= start_date)
+    if end_date:
+        query = query.filter(Expense.created_at <= end_date)
+    
+    result = query.scalar()
+    return float(result) if result else 0.0
+
 def get_expense_sum_by_category(
     db: Session,
     user_id: int,

@@ -3,11 +3,10 @@
 """
 import os
 import sys
-from dotenv import load_dotenv
 from datetime import datetime
 
-# Завантаження змінних оточення
-load_dotenv()
+# Імпорт конфігурації з config.py
+from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
 # Імпорт наших модулів
 from db.database import init_db, get_db_session, engine
@@ -30,8 +29,11 @@ def main():
     print("Тестування модуля бази даних Voice Expense Tracker")
     print("-" * 50)
     
+    # Виводимо інформацію про базу даних
+    print(f"З'єднання з базою даних: {DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+    
     # Створення таблиць
-    print("Створення таблиць бази даних...")
+    print("\nСтворення таблиць бази даних...")
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     print("Таблиці успішно створено.")

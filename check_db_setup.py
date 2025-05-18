@@ -2,11 +2,15 @@
 Простий скрипт для перевірки налаштування бази даних.
 """
 import os
-from dotenv import load_dotenv
+from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
-# Завантажуємо змінні оточення
-print("Завантаження змінних оточення...")
-load_dotenv()
+# Виводимо інформацію про налаштування бази даних
+print("Налаштування бази даних:")
+print(f"- Хост: {DB_HOST}")
+print(f"- Порт: {DB_PORT}")
+print(f"- База даних: {DB_NAME}")
+print(f"- Користувач: {DB_USER}")
+print(f"- Пароль: {'*' * len(DB_PASSWORD) if DB_PASSWORD else 'не вказано'}")
 
 # Перевіряємо з'єднання з базою даних
 print("\nПеревірка з'єднання з базою даних...")
