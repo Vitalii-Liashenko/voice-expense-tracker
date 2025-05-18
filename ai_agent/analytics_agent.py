@@ -1,6 +1,7 @@
 """
 Модуль для генерації аналітики витрат.
 """
+from db.database import get_db_session
 from db.queries import get_expenses_by_category, get_total_expenses
 
 def generate_analytics(message: str) -> str:

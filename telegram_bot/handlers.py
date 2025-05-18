@@ -12,6 +12,7 @@ from db.queries import seed_test_data, check_budget_limit, get_remaining_budget
 from ai_agent.intent_classifier import classify_intent
 from ai_agent.expense_parser import parse_expense
 from ai_agent.analytics_agent import generate_analytics
+from whisper_transcriber import download_voice_message, transcribe_audio
 from config import AUTHOR_USER_ID
 
 AUTHOR_USER_ID = AUTHOR_USER_ID
@@ -67,17 +68,58 @@ async def voice_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
     user_id = update.effective_user.id
     
     # Перевірка авторизації
-    if user_id != int(os.getenv("AUTHOR_USER_ID")):
+    if user_id != AUTHOR_USER_ID:
         return
     
     # Отримання голосового повідомлення
     voice_file = await update.message.voice.get_file()
     
-    # Тут буде інтеграція з Whisper API для транскрипції голосу
-    # Поки що повертаємо повідомлення про отримання голосового повідомлення
-    await update.message.reply_text(
-        "Я отримав ваше голосове повідомлення."
-    )
+    # Повідомити користувача про початок обробки
+    await update.message.reply_text("Обробляю ваше голосове повідомлення...")
+    
+    try:
+        # Завантаження голосового повідомлення
+        audio_path = await download_voice_message(voice_file)
+        
+        # Транскрипція голосу в текст
+        transcribed_text = await transcribe_audio(audio_path)
+        
+        # Показати користувачу розпізнаний текст
+        await update.message.reply_text(f"Розпізнаний текст: \"{transcribed_text}\"")
+        
+        # Класифікація наміру
+        intent = classify_intent(transcribed_text)
+        
+        if intent == "expense":
+            # Парсинг витрати
+            expense = parse_expense(transcribed_text)
+            if expense:
+                # Збереження витрати в базу даних
+                db = get_db_session()
+                try:
+                    # Тут буде збереження витрати
+                    # Поки що повертаємо повідомлення про успішне збереження
+                    await update.message.reply_text(
+                        f"Збережено витрату: {expense['amount']} грн - {expense['category']}"
+                    )
+                finally:
+                    db.close()
+        elif intent == "analytics":
+            # Генерація аналітики
+            analytics = generate_analytics(transcribed_text)
+            await update.message.reply_text(
+                analytics,
+                parse_mode=ParseMode.HTML
+            )
+        else:
+            await update.message.reply_text(
+                "Вибачте, я не розумію це запитання. Спробуйте спочатку записати витрату або запитати про аналітику."
+            )
+    except Exception as e:
+        logger.error(f"Error processing voice message: {e}")
+        await update.message.reply_text(
+            "Виникла помилка при обробці голосового повідомлення. Будь ласка, спробуйте ще раз."
+        )
 
 async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробник текстових повідомлень."""
