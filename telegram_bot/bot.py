@@ -1,54 +1,45 @@
 """
 Головний файл для налаштування та запуску Telegram бота.
 """
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, Updater
-from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram import BotCommand
 import sys
 import os
+import logging
 
 # Add parent directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import TELEGRAM_BOT_TOKEN, AUTHOR_USER_ID
+from telegram_bot.handlers import (
+    start_handler,
+    help_handler,
+    voice_message_handler,
+    text_message_handler
+)
+
+# Налаштування логування
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 # Отримуємо токен бота з конфігурації
 TELEGRAM_TOKEN = TELEGRAM_BOT_TOKEN
-AUTHOR_USER_ID = AUTHOR_USER_ID
-
-async def start_handler(update, context):
-    """Обробник команди /start."""
-    await update.message.reply_text("Привіт! Я Voice Expense Tracker бот. Надішліть мені голосове повідомлення про ваші витрати.")
-
-async def help_handler(update, context):
-    """Обробник команди /help."""
-    help_text = """
-    Використання Voice Expense Tracker:
-    
-    /start - Початок роботи з ботом
-    /help - Показати цю довідку
-    
-    Голосове повідомлення - надішліть аудіо з описом витрат
-    Текстове повідомлення - введіть суму і опис витрат вручну
-    """
-    await update.message.reply_text(help_text)
-
-async def voice_message_handler(update, context):
-    """Обробник голосових повідомлень."""
-    await update.message.reply_text("Отримано голосове повідомлення. Обробка...")
-    # Тут буде логіка обробки голосових повідомлень
-
-async def text_message_handler(update, context):
-    """Обробник текстових повідомлень."""
-    await update.message.reply_text("Отримано текстове повідомлення. Обробка...")
-    # Тут буде логіка обробки текстових повідомлень
 
 async def error_handler(update, context):
-    """Обробка помилок."""
-    print(f"Error: {context.error}")
-    await context.bot.send_message(
-        chat_id=AUTHOR_USER_ID,
-        text="Вибачте, сталася помилка. Спробуйте ще раз."
-    )
+    """Обробник помилок."""
+    logger.error(f"Сталася помилка при обробці оновлення: {context.error}")
+
+async def setup_commands(application):
+    """Налаштування команд бота для меню."""
+    commands = [
+        BotCommand("start", "Почати роботу з ботом"),
+        BotCommand("help", "Показати довідку")
+    ]
+    await application.bot.set_my_commands(commands)
+    logger.info("Команди бота налаштовано")
 
 def setup_bot():
     """Налаштування бота."""
@@ -64,14 +55,18 @@ def setup_bot():
     # Додаємо обробник помилок
     application.add_error_handler(error_handler)
     
+    # Налаштовуємо команди бота
+    application.post_init = setup_commands
+    
+    logger.info("Бота налаштовано")
     return application
 
-def start_bot():
+def run_bot():
     """Запуск бота."""
+    logger.info("Запускаємо бота...")
     application = setup_bot()
-    
-    # Пускаємо бота
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    application.run_polling()
+    logger.info("Бот зупинений")
 
 if __name__ == "__main__":
-    start_bot()
+    run_bot()

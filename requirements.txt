@@ -10,3 +10,4 @@ langchain-community==0.0.29
 pytest==7.4.4
 black==24.1.1
 flake8==7.0.0
+anthropic==0.18.1
