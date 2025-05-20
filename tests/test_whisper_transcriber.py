@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from whisper_transcriber.transcriber import download_voice_message, transcribe_audio
+from tools.transcriber import download_voice_message, transcribe_audio
 
 # Mock response for OpenAI transcription
 MOCK_TRANSCRIPTION = "Купив продукти за 250 гривень"
@@ -44,7 +44,7 @@ async def test_download_voice_message(mock_voice_file):
         os.unlink(result)
 
 @pytest.mark.asyncio
-@patch('whisper_transcriber.transcriber.client')
+@patch('tools.transcriber.client')
 async def test_transcribe_audio(mock_client, temp_audio_file):
     """Test transcribing audio using the OpenAI API"""
     # Configure the mock client
@@ -62,7 +62,7 @@ async def test_transcribe_audio(mock_client, temp_audio_file):
     assert not os.path.exists(temp_audio_file)
 
 @pytest.mark.asyncio
-@patch('whisper_transcriber.transcriber.client')
+@patch('tools.transcriber.client')
 async def test_transcribe_audio_handles_errors(mock_client, temp_audio_file):
     """Test error handling during audio transcription"""
     # Configure the mock client to raise an exception

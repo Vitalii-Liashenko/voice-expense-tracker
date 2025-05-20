@@ -1,14 +1,15 @@
 """
-Tests for the AI agent functionality
+Тести для AI-агентів.
 """
-import pytest
-import json
+import unittest
 from unittest.mock import patch, MagicMock
+import json
+
 from ai_agent.intent_classifier import classify_intent
 from ai_agent.expense_parser import parse_expense
 
 # Skip the first test that tries to use the real API
-@pytest.mark.skip(reason="Requires real OpenAI API key")
+@unittest.skip(reason="Requires real OpenAI API key")
 def test_intent_classifier():
     """Test the intent classifier with various inputs"""
     # Test expense intents
@@ -27,60 +28,54 @@ def test_intent_classifier():
     assert classify_intent("Привіт, як справи?") == "unknown"
     assert classify_intent("Котра година?") == "unknown"
 
-@patch('ai_agent.open_ai_intent_classifier.OPENAI_API_KEY', 'dummy_key')
-def test_classify_intent_expense():
-    """Тест класифікації повідомлення про витрату."""
-    # Створюємо мок для клієнта OpenAI
-    mock_client = MagicMock()
+class TestIntentClassifier(unittest.TestCase):
+    """Тести для класифікатора намірів."""
     
-    # Налаштовуємо відповідь від OpenAI
-    mock_resp = MagicMock()
-    mock_choice = MagicMock()
-    mock_message = MagicMock()
-    mock_message.content = '{"intention": "expense"}'
-    mock_choice.message = mock_message
-    mock_resp.choices = [mock_choice]
-    mock_client.chat.completions.create.return_value = mock_resp
+    def setUp(self):
+        """Встановлює необхідні моки перед виконанням тестів."""
+        # Створюємо мок для клієнта OpenAI
+        self.mock_client = MagicMock()
+        
+        # Створюємо мок для відповіді від OpenAI
+        self.mock_response = MagicMock()
+        self.mock_choice = MagicMock()
+        self.mock_message = MagicMock()
+        self.mock_message.content = '{"type": "expense"}'
+        self.mock_choice.message = self.mock_message
+        self.mock_response.choices = [self.mock_choice]
+        self.mock_client.chat.completions.create.return_value = self.mock_response
     
-    # Застосовуємо мок клієнта
-    with patch('ai_agent.open_ai_intent_classifier.client', mock_client):
+    @patch('ai_agent.intent_classifier.OPENAI_API_KEY', 'dummy_key')
+    def test_successful_intent_classification(self):
+        """Тест успішної класифікації наміру."""
+        with patch('ai_agent.intent_classifier.client', self.mock_client):
+            # Тестуємо класифікацію
+            result = classify_intent("Купив продукти за 300 гривень")
+            
+            # Перевіряємо результат
+            self.assertEqual(result, "expense")
+    
+    @patch('ai_agent.intent_classifier.OPENAI_API_KEY', 'dummy_key')
+    def test_invalid_json_response(self):
+        """Тест обробки невалідної JSON відповіді."""
+        # Мокуємо невалідну JSON відповідь
+        self.mock_message.content = "Invalid JSON"
+        
+        with patch('ai_agent.intent_classifier.client', self.mock_client):
+            # Тестуємо класифікацію
+            result = classify_intent("Купив продукти за 300 гривень")
+            
+            # Перевіряємо результат
+            self.assertEqual(result, "unknown")
+    
+    @patch('ai_agent.intent_classifier.OPENAI_API_KEY', None)
+    def test_missing_api_key(self):
+        """Тест поведінки при відсутності API ключа."""
         # Тестуємо класифікацію
-        intent = classify_intent("Купив хліб за 25 грн")
+        result = classify_intent("Купив продукти за 300 гривень")
         
         # Перевіряємо результат
-        assert intent == "expense"
-
-@patch('ai_agent.open_ai_intent_classifier.OPENAI_API_KEY', 'dummy_key')
-def test_classify_intent_analytics():
-    """Тест класифікації повідомлення про аналітику."""
-    # Створюємо мок для клієнта OpenAI
-    mock_client = MagicMock()
-    
-    # Налаштовуємо відповідь від OpenAI
-    mock_resp = MagicMock()
-    mock_choice = MagicMock()
-    mock_message = MagicMock()
-    mock_message.content = '{"intention": "analytics"}'
-    mock_choice.message = mock_message
-    mock_resp.choices = [mock_choice]
-    mock_client.chat.completions.create.return_value = mock_resp
-    
-    # Застосовуємо мок клієнта
-    with patch('ai_agent.open_ai_intent_classifier.client', mock_client):
-        # Тестуємо класифікацію
-        intent = classify_intent("Скільки я витратив на їжу?")
-        
-        # Перевіряємо результат
-        assert intent == "analytics"
-
-@patch('ai_agent.open_ai_intent_classifier.OPENAI_API_KEY', None)
-def test_classify_intent_no_api_key():
-    """Тест класифікації повідомлення без API ключа."""
-    # Тестуємо класифікацію без API ключа
-    intent = classify_intent("Це тестове повідомлення")
-    
-    # Без API ключа має повертатися "unknown"
-    assert intent == "unknown"
+        self.assertEqual(result, "unknown")
 
 def test_expense_parser():
     """Test the expense parser with various inputs"""

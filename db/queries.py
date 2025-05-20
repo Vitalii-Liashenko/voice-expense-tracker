@@ -37,7 +37,8 @@ def save_expense(
         category=category,
         amount=amount,
         description=description,
-        transcript=transcript
+        transcript=transcript,
+        created_at=datetime.now()
     )
     db.add(expense)
     db.commit()

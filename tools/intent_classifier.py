@@ -1,5 +1,5 @@
 """
-Модуль для класифікації намірів повідомлень з використанням OpenAI gpt-4o-mini.
+Module for classifying message intents using OpenAI gpt-4o-mini.
 """
 import re
 import os
@@ -9,43 +9,43 @@ from typing import Dict, Optional, Literal
 import openai
 from config import OPENAI_API_KEY
 
-# Налаштування логування
+# Logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Створюємо клієнт OpenAI
+# Create OpenAI client
 client = None
 if OPENAI_API_KEY:
     try:
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
     except Exception as e:
-        logger.error(f"Помилка ініціалізації клієнта OpenAI: {e}")
+        logger.error(f"Error initializing OpenAI client: {e}")
 else:
-    logger.warning("OPENAI_API_KEY не знайдено в змінних середовища")
+    logger.warning("OPENAI_API_KEY not found in environment variables")
 
-# Типи намірів
+# Intent types
 IntentType = Literal["expense", "analytics", "unknown"]
 
 def classify_intent(message: str) -> IntentType:
     """
-    Класифікує намір повідомлення за допомогою OpenAI gpt-4o-mini.
-    Повертає "expense" для витрат, "analytics" для аналітики, або "unknown".
+    Classifies message intent using OpenAI gpt-4o-mini.
+    Returns "expense" for expenses, "analytics" for analytics, or "unknown".
     
     Args:
-        message: Текст повідомлення
+        message: Message text
         
     Returns:
-        Тип наміру: "expense", "analytics", або "unknown"
+        Intent type: "expense", "analytics", or "unknown"
     """
     if not client or not OPENAI_API_KEY:
-        logger.warning("API ключ для OpenAI не налаштовано або клієнт не ініціалізовано. Використовуємо локальний класифікатор.")
+        logger.warning("OpenAI API key not configured or client not initialized. Using local classifier.")
         return "unknown"
     
     try:
-        # Формуємо промпт для OpenAI
+        # Form prompt for OpenAI
         system_prompt = """
         You are acting as a text analyzer that takes messages in Ukrainian language and must classify the user's intent.
         You must determine if the message is about:
@@ -61,45 +61,45 @@ def classify_intent(message: str) -> IntentType:
         Example: {"intention": "expense"} or {"intention": "analytics"} or {"intention": "unknown"}
         """
         
-        # Відправляємо запит до OpenAI
-        logger.info(f"Відправляємо запит до OpenAI для класифікації: '{message}'")
+        # Send request to OpenAI
+        logger.info(f"Sending request to OpenAI for classification: '{message}'")
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": message}
             ],
-            temperature=0.0,  # Низька температура для детермінованих відповідей
+            temperature=0.0,  # Low temperature for deterministic responses
             response_format={"type": "json_object"}
         )
         
-        # Отримуємо відповідь
+        # Get response
         raw_result = response.choices[0].message.content.strip()
-        logger.info(f"Відповідь OpenAI: '{raw_result}'")
+        logger.info(f"OpenAI response: '{raw_result}'")
         
-        # Парсимо JSON відповідь
+        # Parse JSON response
         try:
-            # Спробуємо спарсити відповідь як JSON
+            # Try to parse response as JSON
             result_json = json.loads(raw_result)
             
-            # Перевіряємо, чи є в JSON поле 'intention'
+            # Check if JSON has 'intention' field
             if 'intention' in result_json:
                 intent = result_json['intention'].lower()
-                logger.info(f"Розпізнаний намір: {intent}")
+                logger.info(f"Recognized intent: {intent}")
                 
-                # Перевіряємо, чи намір є одним із допустимих значень
+                # Check if intent is one of the allowed values
                 if intent in ["expense", "analytics", "unknown"]:
                     return intent
                 else:
-                    logger.warning(f"Неочікуваний намір від OpenAI: '{intent}'")
+                    logger.warning(f"Unexpected intent from OpenAI: '{intent}'")
             else:
-                logger.warning(f"У відповіді відсутнє поле 'intention'")
+                logger.warning(f"Response missing 'intention' field")
         except json.JSONDecodeError:
-            logger.warning(f"Не вдалося декодувати JSON відповідь від OpenAI: '{raw_result}'")
+            logger.warning(f"Failed to decode JSON response from OpenAI: '{raw_result}'")
         except Exception as e:
-            logger.error(f"Помилка при обробці відповіді від OpenAI: {e}")
-
+            logger.error(f"Error processing OpenAI response: {e}")
+        
+        return "unknown"
     except Exception as e:
-        logger.error(f"Помилка під час класифікації наміру з OpenAI: {e}")
-    
-    return "unknown" 
+        logger.error(f"Error classifying intent: {e}")
+        return "unknown" 

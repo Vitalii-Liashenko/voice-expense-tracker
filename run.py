@@ -1,7 +1,7 @@
 """
-Voice Expense Tracker - головний файл запуску
+Voice Expense Tracker - main startup file
 
-Цей файл запускає Telegram бота для відстеження витрат за допомогою голосових повідомлень.
+This file launches the Telegram bot for expense tracking using voice messages.
 """
 import logging
 import sys
@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Налаштування логування
+# Logging configuration
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -18,19 +18,19 @@ logger = logging.getLogger(__name__)
 
 def main():
     """
-    Головна функція запуску бота.
+    Main bot startup function.
     
-    1. Перевіряє наявність необхідних змінних середовища
-    2. Завантажує конфігурацію
-    3. Запускає Telegram бота
+    1. Checks for required environment variables
+    2. Loads configuration
+    3. Launches Telegram bot
     """
-    logger.info("Запуск Voice Expense Tracker")
+    logger.info("Starting Voice Expense Tracker")
     
-    # Змінні середовища вже завантажені в config.py, тому повторно не викликаємо load_dotenv()
-    # Імпортуємо config, щоб переконатися, що змінні середовища завантажені
+    # Environment variables are already loaded in config.py, so we don't call load_dotenv() again
+    # Import config to ensure environment variables are loaded
     import config
     
-    # Перевіряємо наявність необхідних API ключів
+    # Check for required API keys
     required_env_vars = [
         "TELEGRAM_BOT_TOKEN",
         "AUTHOR_USER_ID",
@@ -41,21 +41,21 @@ def main():
     missing_vars = [var for var in required_env_vars if not os.getenv(var)]
     
     if missing_vars:
-        logger.error(f"Відсутні необхідні змінні середовища: {', '.join(missing_vars)}")
-        logger.error("Будь ласка, додайте їх у файл .env.local")
+        logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+        logger.error("Please add them to the .env.local file")
         sys.exit(1)
     
-    # Імпортуємо модуль бота
+    # Import bot module
     from telegram_bot.bot import run_bot
     
-    # Запускаємо бота
+    # Start the bot
     try:
-        logger.info("Запускаємо бота...")
+        logger.info("Starting the bot...")
         run_bot()
     except KeyboardInterrupt:
-        logger.info("Бот зупинений користувачем")
+        logger.info("Bot stopped by user")
     except Exception as e:
-        logger.error(f"Помилка при запуску бота: {e}")
+        logger.error(f"Error starting the bot: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -46,7 +46,7 @@ async def download_voice_message(voice_file: TelegramFile) -> Path:
         return temp_path
     except Exception as e:
         logger.error(f"Error downloading voice message: {e}")
-        raise
+        raise e
 
 async def transcribe_audio(audio_file_path: Path) -> str:
     """
@@ -79,4 +79,4 @@ async def transcribe_audio(audio_file_path: Path) -> str:
         # Clean up the temporary file even if transcription fails
         if os.path.exists(audio_file_path):
             os.unlink(audio_file_path)
-        raise 
+        raise e 
