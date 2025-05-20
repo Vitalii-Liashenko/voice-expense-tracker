@@ -15,7 +15,7 @@
 - Python 3.9+
 - Telegram Bot API
 - OpenAI Whisper API для розпізнавання мовлення
-- Claude API для класифікації намірів
+- OpenAI API для класифікації намірів
 - PostgreSQL для зберігання даних
 - SQLAlchemy ORM
 
@@ -36,7 +36,6 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 AUTHOR_USER_ID=your_telegram_user_id
 
 OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
 ### 2. Отримання API ключів
@@ -44,7 +43,7 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 - **Telegram Bot Token**: Створіть бота через [@BotFather](https://t.me/BotFather) і отримайте токен
 - **Telegram User ID**: Використовуйте [@userinfobot](https://t.me/userinfobot) для отримання ID
 - **OpenAI API Key**: Отримайте на [платформі OpenAI](https://platform.openai.com/)
-- **Anthropic API Key**: Зареєструйтесь на [платформі Anthropic](https://console.anthropic.com/)
+
 
 ### 3. Запуск бази даних
 
@@ -66,27 +65,35 @@ python bot.py
 
 ## Структура проекту
 
-- `ai_agent/` - Модулі для аналізу та класифікації повідомлень
-  - `intent_classifier.py` - Класифікатор намірів (витрати vs аналітика)
-  - `expense_parser.py` - Парсер інформації про витрати
-  - `analytics_agent.py` - Генерація аналітики
+- `ai_agent/` - Модулі для обробки логіки AI та взаємодії з LLM
+  - `analytics_agent.py` - Агент для обробки аналітичних запитів (використовує LangChain SQL tool)
+  - `expenses_agent.py` - Агент для парсингу деталей витрат з повідомлень
 - `db/` - Модулі для роботи з базою даних
-- `telegram_bot/` - Модулі для роботи з Telegram ботом
-- `whisper_transcriber/` - Обробка голосових повідомлень
+  - `database.py` - Налаштування підключення до БД (e.g., SQLAlchemy engine, session)
+  - `models.py` - SQLAlchemy ORM моделі для таблиць бази даних (e.g., expenses, users, limits)
+  - `queries.py` - CRUD операції та інші функції для запитів до бази даних
+- `telegram_bot/` - Модулі для Telegram бота
+  - `bot.py` - Основна логіка Telegram бота, включаючи налаштування диспетчера
+  - `handlers.py` - Обробники повідомлень для різних команд та типів повідомлень
+  - `message_processor.py` - Обробляє вхідні повідомлення перед передачею AI агентам
+- `tools/` - Допоміжні інструменти та утиліти
+  - `intent_classifier.py` - Класифікатор намірів на основі LLM (витрата, запит, тощо)
+  - `transcriber.py` - Транскрипція голосових повідомлень в текст (e.g., використовуючи Whisper API)
+  - `translator.py` - Можливості перекладу тексту
 
-## Використання Claude API
+## Використання OpenAI API
 
-Проект використовує Claude 3.7 Sonnet для класифікації намірів користувача та парсингу витрат. Основні моменти:
+Проект використовує OpenAI для класифікації намірів користувача та парсингу витрат. Основні моменти:
 
-1. Для використання Claude API необхідно отримати API ключ з [Anthropic Console](https://console.anthropic.com/)
-2. Додати ключ у файл `.env.local` як `ANTHROPIC_API_KEY=your_key_here`
+1. Для використання OpenAI API необхідно отримати API ключ з [OpenAI Console](https://platform.openai.com/)
+2. Додати ключ у файл `.env` як `OPENAI_API_KEY=your_key_here`
 3. При відсутності ключа система автоматично перемикається на локальну класифікацію намірів
 
 ### Модуль expense_parser
 
-Новий парсер витрат використовує Claude 3.7 Sonnet для аналізу текстових повідомлень та витягування інформації про витрати:
+Новий парсер витрат використовує OpenAI для аналізу текстових повідомлень та витягування інформації про витрати:
 
-1. **Принцип роботи**: парсер передає текстове повідомлення в Claude API, який аналізує його та повертає структурований JSON
+1. **Принцип роботи**: парсер передає текстове повідомлення в OpenAI API, який аналізує його та повертає структурований JSON
 2. **Формат відповіді**: JSON з полями `amount`, `category`, `description`
 3. **Переваги**: висока точність розпізнавання українських текстів, гнучкість у розумінні різних формулювань
 4. **Обробка помилок**: валідація отриманого JSON, обробка відсутніх або невалідних полів, фоллбек на категорію "Others"
@@ -113,7 +120,7 @@ result = parser.parse_expense("Купив продукти в АТБ за 235,50
 ### Внутрішній механізм роботи intent_classifier:
 
 1. Отримання тексту від користувача
-2. Відправка запиту до Claude API з чітким промптом для класифікації
+2. Відправка запиту до OpenAI API з чітким промптом для класифікації
 3. Обробка відповіді та визначення наміру: "expense", "analytics" або "unknown"
 4. Логування результатів класифікації
 5. Використання fallback-класифікатора при помилках або відсутності ключа
@@ -133,4 +140,3 @@ python -m unittest tests/test_claude_expense_parser.py
 
 # Запуск інтеграційних тестів (потрібен API ключ)
 python tests/integration_test_parser.py
-```

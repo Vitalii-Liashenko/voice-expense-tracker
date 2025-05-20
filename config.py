@@ -22,9 +22,6 @@ AUTHOR_USER_ID = int(os.getenv("AUTHOR_USER_ID"))
 # OpenAI configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Anthropic configuration
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-
 # Budget limits (in Ukrainian hryvnia)
 DEFAULT_BUDGET_LIMITS = {
     "Foods": 2000,

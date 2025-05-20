@@ -35,7 +35,11 @@ def main():
         "TELEGRAM_BOT_TOKEN",
         "AUTHOR_USER_ID",
         "OPENAI_API_KEY",
-        "ANTHROPIC_API_KEY"
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_USER",
+        "DB_PASSWORD",
     ]
     
     missing_vars = [var for var in required_env_vars if not os.getenv(var)]

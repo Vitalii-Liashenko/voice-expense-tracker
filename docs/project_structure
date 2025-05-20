@@ -1,39 +1,41 @@
 voice_expense_tracker/
 │
-├── .env                        # Секрети: Telegram Token, OpenAI API Key
-├── docker-compose.yml         # Контейнер для PostgreSQL
-├── requirements.txt           # Залежності (або pyproject.toml, якщо використовуєш Poetry)
-├── run.py                     # Точка входу
+├── .env                        # Environment variables (Telegram Token, OpenAI API Key, DB_URL, etc.)
+├── .gitignore                  # Specifies intentionally untracked files that Git should ignore
+├── README.md                   # Project overview and setup instructions
+├── config.py                   # Project configuration (database, API keys, settings)
+├── docker-compose.yml          # Docker Compose configuration for services (e.g., PostgreSQL)
+├── requirements.txt            # Python project dependencies
+├── run.py                      # Main entry point to run the application
 │
-├── config/
-│   └── settings.py            # Налаштування проєкту (база, API ключі, ліміти)
+├── ai_agent/                   # Modules related to AI processing and decision making
+│   ├── analytics_agent.py      # LLM agent for handling analytical queries (e.g., using LangChain SQL tool)
+│   └── expenses_agent.py       # LLM agent for parsing expense details from messages
 │
-├── telegram_bot/
-│   ├── __init__.py
-│   ├── handlers.py            # Обробка вхідних повідомлень (голос, текст)
-│   └── bot.py                 # Telegram Bot Dispatcher
+├── db/                         # Database related modules
+│   ├── database.py             # Database connection setup (e.g., SQLAlchemy engine, session)
+│   ├── models.py               # SQLAlchemy ORM models for database tables (e.g., expenses, users)
+│   └── queries.py              # CRUD operations and other database query functions
 │
-├── whisper_transcriber/
-│   ├── __init__.py
-│   └── transcriber.py         # Використання Whisper API для розпізнавання голосу
+├── docs/                       # Project documentation
+│   ├── project_structure       # This file: outlines the project's directory and file structure
+│   ├── prd.md                  # Product Requirements Document
+│   ├── business_requirements.md # Business requirements
+│   ├── technical_requirements.md # Technical requirements
+│   └── todo.txt                # TODO list for the project
 │
-├── ai_agent/
-│   ├── __init__.py
-│   ├── intent_classifier.py   # LLM: визначення наміру (витрата / запит / інше)
-│   ├── expense_parser.py      # LLM: витяг суми, категорії, опису
-│   └── analytics_agent.py     # LLM: відповіді на аналітичні запити (LangChain SQL tool)
+├── telegram_bot/               # Modules for the Telegram bot interface
+│   ├── bot.py                  # Core Telegram bot logic, including dispatcher setup
+│   ├── handlers.py             # Message handlers for various commands and message types
+│   └── message_processor.py    # Processes incoming messages before handing to AI agents
 │
-├── db/
-│   ├── __init__.py
-│   ├── models.py              # SQLAlchemy моделі (таблиця витрат, ліміти)
-│   ├── database.py            # Підключення до Postgres
-│   └── queries.py             # CRUD-операції
+├── tests/                      # Automated tests for the project
+│   ├── test_parser.py          # (Example) Tests for expense parsing logic
+│   ├── test_bot.py             # (Example) Tests for Telegram bot interactions
+│   └── test_db.py              # (Example) Tests for database operations
+│                               # (Note: Actual test files may vary)
 │
-├── utils/
-│   ├── __init__.py
-│   └── helpers.py             # Конвертації, парсери дат, логування, тощо
-│
-└── tests/
-    ├── test_parser.py         # Тестування LLM парсера витрат
-    ├── test_bot.py            # Тестування взаємодії Telegram-бота
-    └── test_db.py             # Тестування запитів до БД
+└── tools/                      # Utility scripts and standalone tools
+    ├── intent_classifier.py    # LLM-based intent classification (expense, query, etc.)
+    ├── transcriber.py          # Voice-to-text transcription (e.g., using Whisper API)
+    └── translator.py           # Text translation capabilities

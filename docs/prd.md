@@ -35,8 +35,8 @@
   - Інше — чемна відмова з поясненням.
 
 ### 🗃️ 3. Збереження даних
-- Зберігаються транзакції у PostgreSQL (через Docker).
-- Поля: user_id, category, amount, description, transcript, timestamp.
+- Зберігаються транзакції та ліміти користувача у PostgreSQL (через Docker). Основні таблиці: `expenses` (для витрат) та `limits` (для місячних бюджетів по категоріях).
+- Поля `expenses`: user_id, category, amount, description, transcript, timestamp.
 
 ### 🧾 4. Категоризація витрат
 - Категорії (англійською): `Foods`, `Shopping`, `Housing`, `Transportation`, `Entertainment`, `Others`.
@@ -48,6 +48,7 @@
 - Повідомлення про:
   - Перевищення бюджету по категорії.
   - Залишок в рамках заданого ліміту.
+- Аналітика базується на даних з таблиць `expenses` та `limits`.
 
 ### 🔁 6. Telegram-інтеграція
 - Всі запити та відповіді проходять лише через Telegram.
@@ -60,7 +61,7 @@
 | Завдання                  | Інструмент / Модель       |
 |---------------------------|---------------------------|
 | Голос → текст             | OpenAI Whisper API        |
-| Інтерпретація наміру      | Claude 3                  |
+| Інтерпретація наміру      | OpenAI                    |
 | Класифікація витрат       | LangChain Agent           |
 | Аналітика та відповіді    | LangChain + SQL Tool      |
 
@@ -84,10 +85,21 @@
 ```sql
 CREATE TABLE expenses (
   id SERIAL PRIMARY KEY,
-  user_id BIGINT,
-  category TEXT,
-  amount NUMERIC,
-  description TEXT,
-  transcript TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  user_id BIGINT,                -- Telegram user ID
+  category TEXT,                 -- Expense category (e.g., Foods, Shopping)
+  amount NUMERIC,                -- Amount of the expense
+  description TEXT,              -- User-provided description or parsed details
+  transcript TEXT,               -- Original or processed voice transcript
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Timestamp of expense creation
 );
+
+CREATE TABLE limits (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,                -- Telegram user ID, links to the user who set the limit
+  category TEXT,                 -- Category for which the limit is set (matches expense categories)
+  monthly_limit NUMERIC,         -- The monthly spending limit for this category
+  UNIQUE (user_id, category)     -- Ensures one limit per category for each user
+);
+```
+
+---
