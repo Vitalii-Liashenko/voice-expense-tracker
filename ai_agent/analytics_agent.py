@@ -1,13 +1,17 @@
 """
-Module for generating expense analytics using OpenAI gpt-4o-mini.
+Module for generating expense analytics using LangChain and OpenAI gpt-4o-mini.
 """
 import re
 import os
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
-import openai
+from typing import Dict, List, Optional, Tuple, Any, Literal
+
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+from langchain_core.output_parsers import JsonOutputParser
+from pydantic import BaseModel, Field
 
 from db.database import get_db_session
 from db.queries import (
@@ -29,15 +33,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create OpenAI client
-client = None
-if OPENAI_API_KEY:
-    try:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-    except Exception as e:
-        logger.error(f"Error initializing OpenAI client: {e}")
-else:
-    logger.warning("OPENAI_API_KEY not found in environment variables")
+# Create the LLM
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0.0,
+    api_key=OPENAI_API_KEY
+)
 
 def _get_period_from_text(text: str) -> Tuple[datetime, Optional[datetime]]:
     """
@@ -92,9 +93,46 @@ def _get_period_from_text(text: str) -> Tuple[datetime, Optional[datetime]]:
     
     return start_date, end_date
 
+# Define the output schema for category extraction
+class CategoryOutput(BaseModel):
+    category: Optional[str] = Field(description="The expense category identified in the text")
+
+# Create the output parser for category extraction
+category_parser = JsonOutputParser(pydantic_model=CategoryOutput)
+
+# Create the prompt template for category extraction
+category_template = f"""
+You are an assistant that analyzes text in English to identify expense categories.
+
+Valid categories: {', '.join(EXPENSE_CATEGORIES)}
+
+Look for mentions of categories in the text. 
+Category words in English might include:
+- Foods: food, groceries, nutrition, supermarket, store, cafe, restaurant, cafeteria
+- Shopping: clothes, shoes, purchases, shopping, electronics, appliances
+- Housing: housing, apartment, utilities, rent, furniture, internet
+- Transportation: transport, taxi, bus, metro, gasoline, fuel
+- Entertainment: entertainment, cinema, theater, concert, club, sports
+- Others: other, rest, various
+
+Example of successful JSON:
+            {{{{
+                "category": "Foods"
+            }}}}
+"""
+
+# Create the category prompt
+category_prompt = ChatPromptTemplate.from_messages([
+    ("system", category_template),
+    ("user", "{message}")
+])
+
+# Create the chain for category extraction
+category_chain = category_prompt | llm | category_parser
+
 def _extract_category_from_text(text: str) -> Optional[str]:
     """
-    Uses OpenAI to determine category from query text.
+    Uses LangChain to determine category from query text.
     
     Args:
         text: Query text
@@ -102,46 +140,26 @@ def _extract_category_from_text(text: str) -> Optional[str]:
     Returns:
         Category or None if couldn't determine
     """
-    if not client or not OPENAI_API_KEY:
+    if not OPENAI_API_KEY:
         return None
     
     try:
-        system_prompt = f"""
-        You are an assistant that analyzes text in English to identify expense categories.
+        # Log the request
+        logger.info(f"Sending request to LangChain for category extraction: '{text}'")
         
-        Valid categories: {', '.join(EXPENSE_CATEGORIES)}
+        # Run the chain
+        result = category_chain.invoke({"message": text})
         
-        Look for mentions of categories in the text. 
-        Category words in Ukrainian might include:
-        - Foods: їжа, продукти, харчування, супермаркет, магазин, кафе, ресторан, їдальня
-        - Shopping: одяг, взуття, покупки, шопінг, електроніка, техніка
-        - Housing: житло, квартира, комуналка, оренда, меблі, інтернет
-        - Transportation: транспорт, таксі, автобус, метро, бензин, паливо
-        - Entertainment: розваги, кіно, театр, концерт, клуб, спорт
-        - Others: інше, решта, різне
+        # Log the result
+        logger.info(f"LangChain category response: {result}")
         
-        Return ONLY a JSON with the field 'category' containing one of the valid categories or null if none is found.
-        Example: {{"category": "Foods"}} or {{"category": null}}
-        """
-        
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
-            ],
-            temperature=0.0,
-            response_format={"type": "json_object"}
-        )
-        
-        # Get response
-        result_json = json.loads(response.choices[0].message.content)
-        
-        if 'category' in result_json and result_json['category'] in EXPENSE_CATEGORIES:
-            return result_json['category']
+        # Extract and validate the category
+        category = result.get("category")
+        if category in EXPENSE_CATEGORIES:
+            return category
         
     except Exception as e:
-        logger.error(f"Error determining category from OpenAI: {e}")
+        logger.error(f"Error determining category from LangChain: {e}")
     
     return None
 
@@ -178,9 +196,44 @@ def _format_period_text(start_date: datetime, end_date: Optional[datetime]) -> s
     # For longer periods
     return f"з {start_date.strftime('%Y-%m-%d')} по {end_date.strftime('%Y-%m-%d')}"
 
+# Define the analytics type
+AnalyticsType = Literal["category", "limit", "summary"]
+
+# Define the output schema for analytics type extraction
+class AnalyticsTypeOutput(BaseModel):
+    type: AnalyticsType = Field(description="The type of analytics request")
+
+# Create the output parser for analytics type extraction
+analytics_type_parser = JsonOutputParser(pydantic_model=AnalyticsTypeOutput)
+
+# Create the prompt template for analytics type extraction
+analytics_type_template = f"""
+You are an assistant that analyzes expense-related queries in English.
+
+Determine the type of analytics request from the message:
+
+1. "category" - when asking about expenses for a specific category
+2. "limit" - when asking about budget limits, remaining budget, or how much can still be spent
+3. "summary" - when asking for overall analytics, total expenses, or a general report
+Return the result in JSON format without any additional text or explanations.
+
+Example of successful JSON:
+{{{{
+    "type": "category"
+}}}}
+"""
+
+analytics_type_prompt = ChatPromptTemplate.from_messages([
+    ("system", analytics_type_template),
+    ("user", "{message}")
+])
+
+# Create the chain for analytics type extraction
+analytics_type_chain = analytics_type_prompt | llm | analytics_type_parser
+
 def _extract_analytics_type(text: str) -> str:
     """
-    Uses OpenAI to determine analytics type from query text.
+    Uses LangChain to determine analytics type from query text.
     
     Args:
         text: Query text
@@ -188,41 +241,26 @@ def _extract_analytics_type(text: str) -> str:
     Returns:
         Analytics type: "category", "limit", "summary"
     """
-    if not client or not OPENAI_API_KEY:
+    if not OPENAI_API_KEY:
         return "summary"
     
     try:
-        system_prompt = """
-        You are an assistant that analyzes expense-related queries in Ukrainian.
+        # Log the request
+        logger.info(f"Sending request to LangChain for analytics type extraction: '{text}'")
         
-        Determine the type of analytics request from the message:
+        # Run the chain
+        result = analytics_type_chain.invoke({"message": text})
         
-        1. "category" - when asking about expenses for a specific category
-        2. "limit" - when asking about budget limits, remaining budget, or how much can still be spent
-        3. "summary" - when asking for overall analytics, total expenses, or a general report
+        # Log the result
+        logger.info(f"LangChain analytics type response: {result}")
         
-        Return ONLY a JSON with the field 'type' containing one of these values.
-        Example: {"type": "category"} or {"type": "limit"} or {"type": "summary"}
-        """
-        
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
-            ],
-            temperature=0.0,
-            response_format={"type": "json_object"}
-        )
-        
-        # Get response
-        result_json = json.loads(response.choices[0].message.content)
-        
-        if 'type' in result_json and result_json['type'] in ["category", "limit", "summary"]:
-            return result_json['type']
+        # Extract and validate the analytics type
+        analytics_type = result.get("type")
+        if analytics_type in ["category", "limit", "summary"]:
+            return analytics_type
         
     except Exception as e:
-        logger.error(f"Error determining analytics type from OpenAI: {e}")
+        logger.error(f"Error determining analytics type from LangChain: {e}")
     
     return "summary"
 

@@ -1,12 +1,17 @@
 """
-Module for parsing and processing expense-related messages.
+Module for parsing and processing expense-related messages using LangChain.
 """
 import logging
 import json
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 from db.database import get_db_session
 from db.queries import save_expense, check_budget_limit
-import openai
+
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+from langchain_core.output_parsers import JsonOutputParser
+from pydantic import BaseModel, Field, validator
+
 from config import OPENAI_API_KEY, EXPENSE_CATEGORIES
 
 # Logging configuration
@@ -16,27 +21,66 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create OpenAI client
-client = None
-if OPENAI_API_KEY:
-    try:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-    except Exception as e:
-        logger.error(f"Error initializing OpenAI client: {e}")
-else:
-    logger.warning("OPENAI_API_KEY not found in environment variables")
+# Define the output schema for expense parsing
+class ExpenseOutput(BaseModel):
+    amount: Optional[float] = Field(description="The numeric value (float) of the expense")
+    category: Optional[str] = Field(description="The expense category")
+    description: Optional[str] = Field(description="A brief description of the expense")
+    
+    @validator('category')
+    def validate_category(cls, v):
+        if v is not None and v not in EXPENSE_CATEGORIES:
+            raise ValueError(f"Category must be one of: {', '.join(EXPENSE_CATEGORIES)}")
+        return v
 
+# Create the output parser
+output_parser = JsonOutputParser(pydantic_model=ExpenseOutput)
+
+# Create the LLM
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0.0,
+    api_key=OPENAI_API_KEY
+)
+
+# Create the prompt template
+system_template = f"""
+You are an assistant that helps analyze expenses from text messages in English.
+Your task is to extract expense information from the message: amount (numeric value),
+category from the list: {', '.join(EXPENSE_CATEGORIES)}, and a brief description of the expense.
+
+Rules:
+1. If it's impossible to determine any field, set its value to null
+2. If the message doesn't contain category information, return "Others" for category
+
+Return the result in JSON format without any additional text or explanations.
+
+Example of successful JSON:
+{{{{
+    "amount": 45.7,
+    "category": "Foods",
+    "description": "Grocery shopping at the supermarket"
+}}}}
+
+"""
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", system_template),
+    ("user", "{message}")
+])
+
+# Create the chain
+expense_chain = prompt | llm | output_parser
 
 class ExpenseParser:
-    """Class for parsing expense information from text messages."""
+    """Class for parsing expense information from text messages using LangChain."""
     
     def __init__(self):
         self.expense_categories = EXPENSE_CATEGORIES
-        self.openai_client = client
     
     def parse_expense(self, message: str) -> Optional[Dict[str, Any]]:
         """
-        Parse expense from message using OpenAI gpt-4o-mini.
+        Parse expense from message using LangChain and OpenAI gpt-4o-mini.
         
         Args:
             message: Message text in Ukrainian
@@ -44,81 +88,40 @@ class ExpenseParser:
         Returns:
             Dictionary with expense information in JSON format or None if expense couldn't be recognized
         """
-        if not self.openai_client:
-            logger.error("OpenAI client not initialized")
+        if not OPENAI_API_KEY:
+            logger.error("OpenAI API key not configured")
             return None
 
         try:
-            # Form system prompt
-            system_prompt = f"""
-            You are an assistant that helps analyze expenses from text messages in Ukrainian.
-            Your task is to extract expense information from the message: amount (numeric value),
-            category, and a brief description of the expense.
+            # Log the request
+            logger.info(f"Sending request to LangChain for expense parsing: '{message}'")
             
-            Rules:
-            1. Allowed expense categories: {', '.join(self.expense_categories)}
-            2. Return ONLY a valid JSON object with the following fields:
-               - amount: numeric value (float) of the expense
-               - category: expense category (one of the allowed categories)
-               - description: brief description of the expense
-            3. If it's impossible to determine any field, set its value to null
-            4. Do not add any explanations, comments, introductions, or conclusions - just clean JSON
-            5. If the message doesn't contain expense information, return an empty JSON: {{}}
+            # Run the chain
+            result = expense_chain.invoke({"message": message})
             
-            Example of successful JSON:
-            {{
-                "amount": 45.7,
-                "category": "Foods",
-                "description": "Grocery shopping at the supermarket"
-            }}
-            """
+            # Log the result
+            logger.info(f"LangChain response: {result}")
             
-            # Send request to OpenAI
-            logger.info(f"Sending request to OpenAI for expense parsing: '{message}'")
-            response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": message}
-                ],
-                temperature=0.0,  # Low temperature for deterministic responses
-                response_format={"type": "json_object"}
-            )
-            
-            # Get response
-            raw_result = response.choices[0].message.content.strip()
-            logger.info(f"OpenAI response: '{raw_result}'")
-            
-            # Parse JSON response
-            try:
-                # Try to parse response as JSON
-                result_json = json.loads(raw_result)
+            # Check if we have valid expense data
+            if result.get("amount") is None and result.get("category") is None:
+                logger.warning("No expense information found in the message")
+                return None
                 
-                # Check if JSON has required fields
-                if all(key in result_json for key in ["amount", "category", "description"]):
-                    # Validate amount
-                    if result_json["amount"] is not None:
-                        try:
-                            result_json["amount"] = float(result_json["amount"])
-                        except (ValueError, TypeError):
-                            logger.warning(f"Invalid amount value: {result_json['amount']}")
-                            return None
-                    
-                    # Validate category
-                    if result_json["category"] not in self.expense_categories:
-                        logger.warning(f"Invalid category: {result_json['category']}")
-                        return None
-                    
-                    logger.info(f"Successfully parsed expense: {result_json}")
-                    return result_json
-                else:
-                    logger.warning("Response missing required fields")
-            except json.JSONDecodeError:
-                logger.warning(f"Failed to decode JSON response from OpenAI: '{raw_result}'")
-            except Exception as e:
-                logger.error(f"Error processing OpenAI response: {e}")
+            # Convert the result to a dictionary
+            expense_data = {
+                "amount": result.get("amount"),
+                "category": result.get("category"),
+                "description": result.get("description")
+            }
             
-            return None
+            # Validate the expense data
+            if expense_data["amount"] is not None and expense_data["category"] is not None:
+                logger.info(f"Successfully parsed expense: {expense_data}")
+                return expense_data
+            else:
+                logger.warning("Missing required expense fields")
+                return None
+                
         except Exception as e:
             logger.error(f"Error parsing expense: {e}")
             return None
