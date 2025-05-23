@@ -1,8 +1,6 @@
 """
 Module for generating expense analytics using LangChain and OpenAI gpt-4o-mini.
 """
-import re
-import os
 import json
 import logging
 from datetime import datetime, timedelta

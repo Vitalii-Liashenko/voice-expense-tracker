@@ -1,25 +1,21 @@
 """
 Обробники команд та повідомлень для Telegram бота.
 """
-import os
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
-from pathlib import Path
 
 from tools.transcriber import download_voice_message, transcribe_audio
 from tools.translator import translate_to_english
 from telegram_bot.message_processor import process_text_with_nlp
 
 from db.database import get_db_session
-from db.queries import seed_test_data, check_budget_limit, get_remaining_budget
+from db.queries import seed_test_data
 from tools.intent_classifier import classify_intent
 from ai_agent.expenses_agent import parse_expense
 from ai_agent.analytics_agent import generate_analytics
 from config import AUTHOR_USER_ID
-
-AUTHOR_USER_ID = AUTHOR_USER_ID
 
 # Налаштування логування
 logging.basicConfig(

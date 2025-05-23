@@ -94,9 +94,9 @@ The project uses OpenAI to classify user intents and parse expenses. Key points:
 
 ### Expenses_agent
 
-The new expense parser uses OpenAI to analyze text messages and extract expense information:
+Expenses_agent uses OpenAI to analyze text messages and extract expense information:
 
-1. **Operating principle**: the parser sends a text message to the OpenAI API, which analyzes it and returns a structured JSON
+1. **Operating principle**: the agent sends a text message to the OpenAI API, which analyzes it and returns a structured JSON
 2. **Response format**: JSON with `amount`, `category`, `description` fields
 3. **Advantages**: high accuracy in recognizing texts, flexibility in understanding different phrasings
 4. **Error handling**: validation of the received JSON, handling of missing or invalid fields, fallback to the "Others" category
@@ -118,23 +118,32 @@ result = parse_expense("Bought groceries at ATB for 235.50 UAH")
 
 The `analytics_agent` is responsible for handling user queries related to expense analysis. It leverages the LangChain SQL tool to interact with the database and provide insights based on the stored expense data. This allows users to ask questions like "How much did I spend on food last month?" or "Show my expenses by category for this week."
 
-### Internal mechanism of intent_classifier:
+### Message processor:
 
-1. Receiving text from the user
-2. Sending a request to the OpenAI API with a clear prompt for classification
-3. Processing the response and determining the intent: "expense", "analytics", or "unknown"
-4. Logging classification results
+1. Receiving text or voice message from the user
+2. Transcribing voice message to text if it is voice message
+3. Sending a request to intent_classifier with a clear prompt for classification
+4. Processing the response and determining the intent: "expense", "analytics", or "unknown"
+5. Logging classification results
+6. If the intent is "expense", the parser sends a request to expenses_agent with a clear prompt for expense parsing
+7. If the intent is "analytics", the parser sends a request to analytics_agent with a clear prompt for analitics or limits used retrieval
 
 ## Testing
 
-The project contains unit and integration tests to validate functionality:
-
-- `tests/test_expenses_agent.py` - unit tests for the expense parser with OpenAI API mocks
-- `tests/test_analytics_agent.py` - unit tests for the analytics agent with OpenAI API mocks  
-- `tests/integration_test_parser.py` - integration tests with real message examples
-
-To run tests:
+The project contains unit tests to validate functionality:
 
 ```bash
 # Run tests
 python -m unittest discover tests
+```
+
+## Future plans
+
+1. Add tracking expenses from mobile app
+2. Add tracking expenses from banking apps
+3. Add posibility of integration with other personal finance apps
+4. Add possibility to switch between different currencies
+5. Add posiibility to change expense categories, limits, build more advanced analytical reports
+6. Switch between different LLMs
+7. Add multilanguage support
+8. Improve security and extend support for many users

@@ -2,8 +2,7 @@
 Module for parsing and processing expense-related messages using LangChain.
 """
 import logging
-import json
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional, Any
 from db.database import get_db_session
 from db.queries import save_expense, check_budget_limit
 

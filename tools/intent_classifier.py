@@ -3,7 +3,7 @@ Module for classifying message intents using LangChain and OpenAI gpt-4o-mini.
 """
 import logging
 import json
-from typing import Literal, Optional
+from typing import Literal
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
