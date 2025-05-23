@@ -147,3 +147,4 @@ python -m unittest discover tests
 6. Switch between different LLMs
 7. Add multilanguage support
 8. Improve security and extend support for many users
+9. Add metrics tracking
