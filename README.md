@@ -1,29 +1,39 @@
 # Voice Expense Tracker
 
-Голосовий трекер витрат за допомогою Telegram бота. Дозволяє записувати витрати голосом, аналізувати бюджет і отримувати звіти.
+A voice expense tracker using a Telegram bot. Allows you to record expenses by voice or text, analyze your budget, and receive reports.
 
-## Основні можливості
+## Key Features
 
-- Запис витрат через голосові повідомлення
-- Автоматичне розпізнавання суми, категорії та опису витрат
-- Аналіз витрат за категоріями та періодами
-- Перевірка лімітів бюджету
-- Зручний Telegram-інтерфейс
+- Record expenses via voice or text messages in Ukrainian
+- Automatic recognition of amount, category, and description of expenses
+- Analysis of expenses by categories and periods
+- Budget limit checks
+- Convenient Telegram interface
 
-## Технології
+## Technologies
 
-- Python 3.9+
+- Python 3.12+
 - Telegram Bot API
-- OpenAI Whisper API для розпізнавання мовлення
-- OpenAI API для класифікації намірів
-- PostgreSQL для зберігання даних
+- OpenAI Whisper API for speech recognition
+- OpenAI API for intent classification
+- PostgreSQL for data storage
 - SQLAlchemy ORM
+- LangChain to simplify integration with AI services
 
-## Налаштування
+## Setup
 
-### 1. Створення .env файлу
+### 1. Clone the repository
+git clone https://github.com/Vitalii-Liashenko/youtube-checker-agent.git
 
-Створіть файл `.env.local` в кореневій директорії проекту і вкажіть наступні змінні:
+### 2. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Create .env file
+
+Create a `.env` file in the root directory of the project and specify the following variables:
 
 ```
 DB_HOST=localhost
@@ -38,105 +48,93 @@ AUTHOR_USER_ID=your_telegram_user_id
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-### 2. Отримання API ключів
+### 4. Obtain API keys
 
-- **Telegram Bot Token**: Створіть бота через [@BotFather](https://t.me/BotFather) і отримайте токен
-- **Telegram User ID**: Використовуйте [@userinfobot](https://t.me/userinfobot) для отримання ID
-- **OpenAI API Key**: Отримайте на [платформі OpenAI](https://platform.openai.com/)
+- **Telegram Bot Token**: Create a bot via [@BotFather](https://t.me/BotFather) and get the token
+- **Telegram User ID**: Use [@userinfobot](https://t.me/userinfobot) to get your ID
+- **OpenAI API Key**: Obtain it on the [OpenAI platform](https://platform.openai.com/)
 
 
-### 3. Запуск бази даних
+### 5. Start the database
 
 ```bash
 docker-compose up -d
 ```
 
-### 4. Встановлення залежностей
+### 6. Run
 
 ```bash
-pip install -r requirements.txt
+python run.py
 ```
 
-### 5. Запуск
+## Project Structure
 
-```bash
-python bot.py
-```
+- `ai_agent/` - Modules for AI logic processing and interaction with LLM
+  - `analytics_agent.py` - Agent for processing analytical queries (uses LangChain SQL tool)
+  - `expenses_agent.py` - Agent for parsing expense details from messages
+- `db/` - Modules for working with the database
+  - `database.py` - Database connection settings (e.g., SQLAlchemy engine, session)
+  - `models.py` - SQLAlchemy ORM models for database tables (e.g., expenses, users, limits)
+  - `queries.py` - CRUD operations and other functions for database queries
+- `telegram_bot/` - Modules for the Telegram bot
+  - `bot.py` - Main logic of the Telegram bot, including dispatcher setup
+  - `handlers.py` - Message handlers for various commands and message types
+  - `message_processor.py` - Processes incoming messages before passing them to AI agents
+- `tools/` - Auxiliary tools and utilities
+  - `intent_classifier.py` - LLM-based intent classifier (expense, query, etc.)
+  - `transcriber.py` - Transcription of voice messages into text (e.g., using Whisper API)
+  - `translator.py` - Text translation capabilities
 
-## Структура проекту
+## Using the OpenAI API
 
-- `ai_agent/` - Модулі для обробки логіки AI та взаємодії з LLM
-  - `analytics_agent.py` - Агент для обробки аналітичних запитів (використовує LangChain SQL tool)
-  - `expenses_agent.py` - Агент для парсингу деталей витрат з повідомлень
-- `db/` - Модулі для роботи з базою даних
-  - `database.py` - Налаштування підключення до БД (e.g., SQLAlchemy engine, session)
-  - `models.py` - SQLAlchemy ORM моделі для таблиць бази даних (e.g., expenses, users, limits)
-  - `queries.py` - CRUD операції та інші функції для запитів до бази даних
-- `telegram_bot/` - Модулі для Telegram бота
-  - `bot.py` - Основна логіка Telegram бота, включаючи налаштування диспетчера
-  - `handlers.py` - Обробники повідомлень для різних команд та типів повідомлень
-  - `message_processor.py` - Обробляє вхідні повідомлення перед передачею AI агентам
-- `tools/` - Допоміжні інструменти та утиліти
-  - `intent_classifier.py` - Класифікатор намірів на основі LLM (витрата, запит, тощо)
-  - `transcriber.py` - Транскрипція голосових повідомлень в текст (e.g., використовуючи Whisper API)
-  - `translator.py` - Можливості перекладу тексту
+The project uses OpenAI to classify user intents and parse expenses. Key points:
 
-## Використання OpenAI API
+1. To use the OpenAI API, you need to obtain an API key from the [OpenAI Console](https://platform.openai.com/)
+2. Add the key to the `.env` file as `OPENAI_API_KEY=your_key_here`
 
-Проект використовує OpenAI для класифікації намірів користувача та парсингу витрат. Основні моменти:
+### Expenses_agent
 
-1. Для використання OpenAI API необхідно отримати API ключ з [OpenAI Console](https://platform.openai.com/)
-2. Додати ключ у файл `.env` як `OPENAI_API_KEY=your_key_here`
-3. При відсутності ключа система автоматично перемикається на локальну класифікацію намірів
+The new expense parser uses OpenAI to analyze text messages and extract expense information:
 
-### Модуль expense_parser
+1. **Operating principle**: the parser sends a text message to the OpenAI API, which analyzes it and returns a structured JSON
+2. **Response format**: JSON with `amount`, `category`, `description` fields
+3. **Advantages**: high accuracy in recognizing texts, flexibility in understanding different phrasings
+4. **Error handling**: validation of the received JSON, handling of missing or invalid fields, fallback to the "Others" category
 
-Новий парсер витрат використовує OpenAI для аналізу текстових повідомлень та витягування інформації про витрати:
-
-1. **Принцип роботи**: парсер передає текстове повідомлення в OpenAI API, який аналізує його та повертає структурований JSON
-2. **Формат відповіді**: JSON з полями `amount`, `category`, `description`
-3. **Переваги**: висока точність розпізнавання українських текстів, гнучкість у розумінні різних формулювань
-4. **Обробка помилок**: валідація отриманого JSON, обробка відсутніх або невалідних полів, фоллбек на категорію "Others"
-
-Приклад використання:
+Example usage:
 ```python
-from ai_agent.claude_expense_parser import ExpenseParser
+# Use the parser to analyze an expense
+result = parse_expense("Bought groceries at ATB for 235.50 UAH")
 
-# Створити екземпляр парсера
-parser = ExpenseParser()
-
-# Використати парсер для аналізу витрати
-result = parser.parse_expense("Купив продукти в АТБ за 235,50 грн")
-
-# Приклад результату
+# Example result
 # {
 #   "amount": 235.5,
 #   "category": "Foods",
-#   "description": "Купівля продуктів в АТБ",
-#   "transcript": "Купив продукти в АТБ за 235,50 грн"
+#   "description": "Grocery shopping at ATB",
+#   "transcript": "Bought groceries at ATB for 235.50 UAH"
 # }
 ```
+### Analytics_agent
 
-### Внутрішній механізм роботи intent_classifier:
+The `analytics_agent` is responsible for handling user queries related to expense analysis. It leverages the LangChain SQL tool to interact with the database and provide insights based on the stored expense data. This allows users to ask questions like "How much did I spend on food last month?" or "Show my expenses by category for this week."
 
-1. Отримання тексту від користувача
-2. Відправка запиту до OpenAI API з чітким промптом для класифікації
-3. Обробка відповіді та визначення наміру: "expense", "analytics" або "unknown"
-4. Логування результатів класифікації
-5. Використання fallback-класифікатора при помилках або відсутності ключа
+### Internal mechanism of intent_classifier:
 
-## Тестування
+1. Receiving text from the user
+2. Sending a request to the OpenAI API with a clear prompt for classification
+3. Processing the response and determining the intent: "expense", "analytics", or "unknown"
+4. Logging classification results
 
-Проект містить модульні та інтеграційні тести для валідації функціональності:
+## Testing
 
-- `tests/test_claude_expense_parser.py` - юніт-тести для парсера витрат з моками Claude API
-- `tests/integration_test_parser.py` - інтеграційні тести з реальними прикладами повідомлень
+The project contains unit and integration tests to validate functionality:
 
-Для запуску тестів:
+- `tests/test_expenses_agent.py` - unit tests for the expense parser with OpenAI API mocks
+- `tests/test_analytics_agent.py` - unit tests for the analytics agent with OpenAI API mocks  
+- `tests/integration_test_parser.py` - integration tests with real message examples
+
+To run tests:
 
 ```bash
-# Запуск юніт-тестів
-python -m unittest tests/test_claude_expense_parser.py
-
-# Запуск інтеграційних тестів (потрібен API ключ)
-python tests/integration_test_parser.py
+# Run tests
+python -m unittest discover tests

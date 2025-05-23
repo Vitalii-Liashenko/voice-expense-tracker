@@ -126,7 +126,6 @@ class ExpenseParser:
             logger.error(f"Error parsing expense: {e}")
             return None
 
-
 # Create a singleton instance
 expense_parser = ExpenseParser()
 

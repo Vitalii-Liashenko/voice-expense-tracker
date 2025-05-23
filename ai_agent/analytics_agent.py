@@ -65,13 +65,14 @@ def _get_period_from_text(text: str) -> Tuple[datetime, Optional[datetime]]:
         yesterday = today - timedelta(days=1)
         start_date = datetime(yesterday.year, yesterday.month, yesterday.day)
         end_date = datetime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59)
-    elif 'week' in text:
-        if 'last' in text or 'previous' in text:
-            start_date = today - timedelta(days=today.weekday() + 7)
-            end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59)
-        else:  # current week
-            start_date = today - timedelta(days=today.weekday())
-            end_date = None
+    elif 'this week' in text or 'current week' in text:
+        start_date = today - timedelta(days=today.weekday())
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0) 
+        end_date = None
+    elif 'last week' in text or 'previous week' in text:
+        start_date = today - timedelta(days=today.weekday() + 7)
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0) 
+        end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59)
     elif 'month' in text:
         if 'last' in text or 'previous' in text:
             if today.month == 1:
